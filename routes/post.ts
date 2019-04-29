@@ -2,7 +2,9 @@ import { Router, Response, Request } from 'express';
 import { verificaToken } from '../middlewares/autenticacion';
 import { Post } from '../models/post.model';
 import { FileUpload } from '../interfaces/file-upload';
+import FileSystem from '../classes/file-system';
 const postRoutes = Router();
+const fileSystem = new FileSystem();
 
 // Obtener GET paginados
 
@@ -27,6 +29,10 @@ postRoutes.post('/', [ verificaToken ], (req: any, res: Response) => {
 	const body = req.body;
 	body.usuario = req.usuario._id;
 
+	const imagenes = fileSystem.imagenesDeTempHaciaPost( req.usuario._id);
+
+	body.imgs = imagenes;
+
 	Post.create(body)
 		.then(async (postDB) => {
 			await postDB.populate('usuario', '-password').execPopulate();
@@ -42,7 +48,7 @@ postRoutes.post('/', [ verificaToken ], (req: any, res: Response) => {
 
 // servicio para subir archivos
 
-postRoutes.post('/upload', [ verificaToken ], (req: Request, res: Response) => {
+postRoutes.post('/upload', [ verificaToken ], async (req: any, res: Response) => {
 	if (!req.files) {
 		return res.status(400).json({
 			ok: false,
@@ -50,27 +56,39 @@ postRoutes.post('/upload', [ verificaToken ], (req: Request, res: Response) => {
 		});
 	}
 
-    const file: FileUpload = req.files.image;
-    if (!file) {
-        return res.status(400).json({
+	const file: FileUpload = req.files.image;
+	if (!file) {
+		return res.status(400).json({
 			ok: false,
 			mensaje: 'No se subió ningun archivo - image'
 		});
-    }
+	}
 
-    if (!file.mimetype.includes('image')) {
-        return res.status(400).json({
+	if (!file.mimetype.includes('image')) {
+		return res.status(400).json({
 			ok: false,
 			mensaje: 'Lo que se subió no es una imagen'
 		});
-    }
+	}
 
+	await fileSystem.guardarImagenTemporal(file, req.usuario._id);
 
 	res.json({
 		ok: true,
 		mensaje: ' se subió  archivo',
 		file: file.mimetype
 	});
+});
+
+
+postRoutes.get('/imagen/:userid/:img', [verificaToken],(req: any, res: Response)=>{
+		const userId = req.params.userid;
+		const img = req.params.img;
+
+		const pathFoto = fileSystem.getFotoUrl( userId, img);
+
+		res.sendFile( pathFoto );
+
 });
 
 export default postRoutes;
