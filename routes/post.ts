@@ -81,7 +81,7 @@ postRoutes.post('/upload', [ verificaToken ], async (req: any, res: Response) =>
 });
 
 
-postRoutes.get('/imagen/:userid/:img', [verificaToken],(req: any, res: Response)=>{
+postRoutes.get('/imagen/:userid/:img',(req: any, res: Response)=>{
 		const userId = req.params.userid;
 		const img = req.params.img;
 
